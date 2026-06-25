@@ -1,0 +1,44 @@
+name: Makedo Integration Tests
+
+on:
+  push:
+    branches: ["master", "main"]
+  pull_request:
+    branches: ["master", "main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Checkout makedo
+      uses: actions/checkout@v4
+      with:
+        repository: MarlonBando/makedo
+        path: makedo-src
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24.x'
+
+    - name: Build makedo
+      run: |
+        cd makedo-src/src
+        go mod tidy
+        go build -ldflags "-X main.versionString=$(cat ../VERSION)" -o ../../bin/makedo
+        echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build ripgrep
+      run: |
+        cargo build
+        echo "$GITHUB_WORKSPACE/target/debug" >> $GITHUB_PATH
+
+    - name: Run Makedo on GUIDE.md
+      run: |
+        makedo test GUIDE.md
